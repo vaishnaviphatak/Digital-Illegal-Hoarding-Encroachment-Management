@@ -271,3 +271,56 @@ function getCasesStore() {
 function saveCasesStore(cases) {
     localStorage.setItem('civictrack_cases_v1', JSON.stringify(cases));
 }
+
+const INITIAL_NOTIFICATIONS = [
+    {
+        id: "NOTIF-101",
+        caseId: "SHD-2026-1042",
+        title: "Official 72-Hour Removal Notice Issued",
+        message: "Municipal Notice MNC/NTC/2026/0891 has been served to SkyHigh Media Pvt Ltd for the illegal commercial hoarding at MG Road & SV Patel Marg.",
+        timestamp: "Today, 09:00 AM",
+        category: "notice",
+        read: false
+    },
+    {
+        id: "NOTIF-102",
+        caseId: "SHD-2026-1039",
+        title: "Demolition & Seizure Action Completed",
+        message: "The illegal political flex banner at Flyover Pillar #14 has been dismantled and removed by Municipal Demolition Squad #3.",
+        timestamp: "Yesterday, 02:00 PM",
+        category: "action",
+        read: false
+    },
+    {
+        id: "NOTIF-103",
+        caseId: "SDE-2026-1035",
+        title: "Case Closed & Full Compliance Verified",
+        message: "The unauthorized footpath digital kiosk outside Metro Station Gate 2 has been cleared and ₹5,000 fine received. Case is now closed.",
+        timestamp: "Sep 24, 10:00 AM",
+        category: "compliance",
+        read: true
+    },
+    {
+        id: "NOTIF-104",
+        caseId: "SHD-2026-1042",
+        title: "Field Inspection Verified by Officer",
+        message: "Inspector Rajesh Varma completed on-site verification and confirmed structural safety hazard for your reported hoarding.",
+        timestamp: "Sep 26, 02:30 PM",
+        category: "verify",
+        read: true
+    }
+];
+
+function getCitizenNotificationsStore() {
+    const data = localStorage.getItem('civictrack_notifications_v1');
+    if (!data) {
+        localStorage.setItem('civictrack_notifications_v1', JSON.stringify(INITIAL_NOTIFICATIONS));
+        return INITIAL_NOTIFICATIONS;
+    }
+    return JSON.parse(data);
+}
+
+function saveCitizenNotificationsStore(notifs) {
+    localStorage.setItem('civictrack_notifications_v1', JSON.stringify(notifs));
+}
+
