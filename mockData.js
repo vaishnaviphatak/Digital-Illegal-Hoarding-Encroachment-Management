@@ -258,17 +258,24 @@ const INITIAL_CASES = [
     }
 ];
 
-// Helper to get local data or initialize default
+// High-performance in-memory cache layer
+let _casesMemoryCache = null;
+let _notifsMemoryCache = null;
+
 function getCasesStore() {
+    if (_casesMemoryCache) return _casesMemoryCache;
     const data = localStorage.getItem('civictrack_cases_v1');
     if (!data) {
         localStorage.setItem('civictrack_cases_v1', JSON.stringify(INITIAL_CASES));
+        _casesMemoryCache = INITIAL_CASES;
         return INITIAL_CASES;
     }
-    return JSON.parse(data);
+    _casesMemoryCache = JSON.parse(data);
+    return _casesMemoryCache;
 }
 
 function saveCasesStore(cases) {
+    _casesMemoryCache = cases;
     localStorage.setItem('civictrack_cases_v1', JSON.stringify(cases));
 }
 
@@ -312,15 +319,20 @@ const INITIAL_NOTIFICATIONS = [
 ];
 
 function getCitizenNotificationsStore() {
+    if (_notifsMemoryCache) return _notifsMemoryCache;
     const data = localStorage.getItem('civictrack_notifications_v1');
     if (!data) {
         localStorage.setItem('civictrack_notifications_v1', JSON.stringify(INITIAL_NOTIFICATIONS));
+        _notifsMemoryCache = INITIAL_NOTIFICATIONS;
         return INITIAL_NOTIFICATIONS;
     }
-    return JSON.parse(data);
+    _notifsMemoryCache = JSON.parse(data);
+    return _notifsMemoryCache;
 }
 
 function saveCitizenNotificationsStore(notifs) {
+    _notifsMemoryCache = notifs;
     localStorage.setItem('civictrack_notifications_v1', JSON.stringify(notifs));
 }
+
 

@@ -112,11 +112,18 @@ function renderSidebarMenu() {
             { id: 'overdue', label: 'Overdue Cases', icon: 'alert-triangle', badge: overdueCasesCount > 0 ? `${overdueCasesCount}` : null, isUrgent: true }
         ];
     } else if (currentRole === 'municipal') {
+        const overdueCount = cases.filter(c => c.status === 'Overdue').length;
+        const pendingNoticesCount = cases.filter(c => c.status === 'Notice Issued').length;
         items = [
-            { id: 'dashboard', label: 'Municipal Dashboard', icon: 'bar-chart-3' },
+            { id: 'dashboard', label: 'Executive Dashboard', icon: 'bar-chart-3' },
             { id: 'cases', label: 'All Cases Registry', icon: 'folder-open' },
             { id: 'map', label: 'GIS Encroachment Map', icon: 'map-pin' },
             { id: 'monitoring', label: 'Ward Analytics', icon: 'pie-chart' },
+            { id: 'officers', label: 'Officer Management', icon: 'users' },
+            { id: 'notices', label: 'Notice Registry', icon: 'file-text', badge: pendingNoticesCount > 0 ? `${pendingNoticesCount}` : null },
+            { id: 'penalties', label: 'Penalties & Fines', icon: 'receipt' },
+            { id: 'compliance', label: 'Compliance Tracker', icon: 'shield-check' },
+            { id: 'dispatch', label: 'Resource Dispatch', icon: 'truck', badge: overdueCount > 0 ? `${overdueCount}` : null, isUrgent: true },
             { id: 'history', label: 'Audit History Log', icon: 'history' }
         ];
     }
@@ -180,6 +187,16 @@ function renderMainView() {
             renderMonitoringPage(contentArea);
         } else if (currentView === 'history') {
             renderHistoryPage(contentArea);
+        } else if (currentView === 'officers') {
+            renderOfficerManagementPage(contentArea);
+        } else if (currentView === 'notices') {
+            renderNoticeRegistryPage(contentArea);
+        } else if (currentView === 'penalties') {
+            renderPenaltiesFinesPage(contentArea);
+        } else if (currentView === 'compliance') {
+            renderComplianceTrackerPage(contentArea);
+        } else if (currentView === 'dispatch') {
+            renderResourceDispatchPage(contentArea);
         } else {
             renderMunicipalDashboard(contentArea);
         }
@@ -505,7 +522,7 @@ function renderOfficerDashboard(container) {
         <div class="filter-bar">
             <div class="search-box">
                 <i data-lucide="search"></i>
-                <input type="text" id="officerSearch" placeholder="Search by Case ID, location or keywords..." onkeyup="filterOfficerCases()">
+                <input type="text" id="officerSearch" placeholder="Search by Case ID, location or keywords..." oninput="filterOfficerCases()">
             </div>
             <div class="filter-group">
                 <select class="filter-select" id="statusFilter" onchange="filterOfficerCases()">
@@ -664,7 +681,7 @@ function renderOfficerAssignedCases(container) {
         <div class="filter-bar">
             <div class="search-box">
                 <i data-lucide="search"></i>
-                <input type="text" id="assignedSearch" placeholder="Search assigned cases by ID, street address or keywords..." onkeyup="filterAssignedOfficerCases()">
+                <input type="text" id="assignedSearch" placeholder="Search assigned cases by ID, street address or keywords..." oninput="filterAssignedOfficerCases()">
             </div>
             <div class="filter-group">
                 <select class="filter-select" id="assignedStatusFilter" onchange="filterAssignedOfficerCases()">
@@ -848,7 +865,7 @@ function renderOfficerOverdueCases(container) {
         <div class="filter-bar">
             <div class="search-box">
                 <i data-lucide="search"></i>
-                <input type="text" id="overdueSearch" placeholder="Search overdue cases by ID, violator or location..." onkeyup="filterOverdueOfficerCases()">
+                <input type="text" id="overdueSearch" placeholder="Search overdue cases by ID, violator or location..." oninput="filterOverdueOfficerCases()">
             </div>
             <div class="filter-group">
                 <select class="filter-select" id="overdueWardFilter" onchange="filterOverdueOfficerCases()">
@@ -952,6 +969,1153 @@ function filterOverdueOfficerCases() {
     lucide.createIcons();
 }
 
+/* ==========================================================================
+   3. MUNICIPAL ADMIN DASHBOARD & EXECUTIVE MANAGEMENT VIEWS
+   ========================================================================== */
+
+function renderMunicipalDashboard(container) {
+    const cases = getCasesStore();
+
+    const totalCases = cases.length;
+    const activeNotices = cases.filter(c => c.status === 'Notice Issued').length;
+    const overdueCount = cases.filter(c => c.status === 'Overdue').length;
+    const verifiedCount = cases.filter(c => c.status === 'Verified' || c.status === 'Under Verification').length;
+    const closedCount = cases.filter(c => c.status === 'Closed' || c.status === 'Compliance' || c.status === 'Action Taken').length;
+    const complianceRate = totalCases > 0 ? Math.round((closedCount / totalCases) * 100) : 100;
+
+    container.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Municipal Executive Control Dashboard</h1>
+                <p class="page-subtitle">Civic Encroachment Overview • Deputy Commissioner Dr. Anita Roy • Central Municipal Command</p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-secondary" onclick="exportMunicipalSummaryReport()">
+                    <i data-lucide="download"></i> Export Executive Report
+                </button>
+                <button class="btn btn-primary" onclick="currentView='dispatch'; renderSidebarMenu(); renderMainView();">
+                    <i data-lucide="truck"></i> Squad Dispatch Center
+                </button>
+            </div>
+        </div>
+
+        <!-- Executive KPI Grid -->
+        <div class="kpi-grid">
+            <div class="kpi-card" onclick="currentView='cases'; renderSidebarMenu(); renderMainView();" style="cursor:pointer;" title="View Master Registry">
+                <div class="kpi-header">
+                    <span>Total Encroachments</span>
+                    <div class="kpi-icon"><i data-lucide="building-2"></i></div>
+                </div>
+                <div class="kpi-value">${totalCases}</div>
+                <div class="kpi-footer">Across all 5 Municipal Wards &rarr;</div>
+            </div>
+
+            <div class="kpi-card" onclick="currentView='notices'; renderSidebarMenu(); renderMainView();" style="cursor:pointer;">
+                <div class="kpi-header">
+                    <span>Active 72h Notices</span>
+                    <div class="kpi-icon" style="background-color:#ffedd5; color:#c2410c;"><i data-lucide="file-text"></i></div>
+                </div>
+                <div class="kpi-value" style="color:#c2410c;">${activeNotices}</div>
+                <div class="kpi-footer">Statutory removal active &rarr;</div>
+            </div>
+
+            <div class="kpi-card" onclick="currentView='dispatch'; renderSidebarMenu(); renderMainView();" style="border-left: 3px solid #ef4444; cursor:pointer;" title="View Demolition Queue">
+                <div class="kpi-header">
+                    <span>Overdue Breaches</span>
+                    <div class="kpi-icon" style="background-color:#fee2e2; color:#ef4444;"><i data-lucide="alert-octagon"></i></div>
+                </div>
+                <div class="kpi-value" style="color:#ef4444;">${overdueCount}</div>
+                <div class="kpi-footer urgent">Demolition order ready &rarr;</div>
+            </div>
+
+            <div class="kpi-card" onclick="currentView='penalties'; renderSidebarMenu(); renderMainView();" style="cursor:pointer;">
+                <div class="kpi-header">
+                    <span>Penalties Levied</span>
+                    <div class="kpi-icon" style="background-color:#dcfce7; color:#15803d;"><i data-lucide="receipt"></i></div>
+                </div>
+                <div class="kpi-value" style="color:#15803d;">₹1,75,000</div>
+                <div class="kpi-footer">Compounding fines billed &rarr;</div>
+            </div>
+
+            <div class="kpi-card" onclick="currentView='monitoring'; renderSidebarMenu(); renderMainView();" style="cursor:pointer;">
+                <div class="kpi-header">
+                    <span>Ward Compliance Rate</span>
+                    <div class="kpi-icon" style="background-color:#e0f2fe; color:#0369a1;"><i data-lucide="pie-chart"></i></div>
+                </div>
+                <div class="kpi-value" style="color:#0369a1;">${complianceRate}%</div>
+                <div class="kpi-footer">Average resolution speed 36h &rarr;</div>
+            </div>
+        </div>
+
+        <!-- Overdue Escalation Banner if Overdue items exist -->
+        ${overdueCount > 0 ? `
+            <div class="urgent-escalation-banner">
+                <div class="urgent-escalation-content">
+                    <div class="urgent-icon-box"><i data-lucide="alert-triangle"></i></div>
+                    <div>
+                        <div class="urgent-title">ATTENTION: ${overdueCount} STATUTORY REMOVAL DEADLINES EXPIRED</div>
+                        <div class="urgent-subtitle">Commercial violators have failed to remove unauthorized hoardings within the 72-hour notice window. Immediate Demolition Squad deployment is authorized under PMC Bylaws §244.</div>
+                    </div>
+                </div>
+                <button class="btn btn-danger" onclick="currentView='dispatch'; renderSidebarMenu(); renderMainView();">
+                    <i data-lucide="zap"></i> Authorize Demolition Squad
+                </button>
+            </div>
+        ` : ''}
+
+        <!-- Split Grid: Ward Breakdown & Category Metrics -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <!-- Left: Ward Breakdown Table -->
+            <div class="card-section" style="margin-bottom:0;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i data-lucide="map-pin"></i> Ward-Wise Encroachment & Compliance Status
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="currentView='monitoring'; renderSidebarMenu(); renderMainView();">Full Analytics &rarr;</button>
+                </div>
+                <div class="card-body" style="padding:0;">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Municipal Ward Zone</th>
+                                    <th>Active Cases</th>
+                                    <th>Notices Served</th>
+                                    <th>Overdue</th>
+                                    <th>Senior Field Officer</th>
+                                    <th>Compliance %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="font-weight:600;">Ward 4 (Central CBD)</td>
+                                    <td><span class="badge badge-reported">${cases.filter(c => c.ward.includes('Ward 4')).length}</span></td>
+                                    <td>${cases.filter(c => c.ward.includes('Ward 4') && c.status === 'Notice Issued').length}</td>
+                                    <td><span style="color:#ef4444; font-weight:700;">${cases.filter(c => c.ward.includes('Ward 4') && c.status === 'Overdue').length}</span></td>
+                                    <td>Inspector Rajesh Varma</td>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                                            <div style="flex:1; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
+                                                <div style="width:82%; height:100%; background:#10b981;"></div>
+                                            </div>
+                                            <span style="font-size:0.75rem; font-weight:600;">82%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="font-weight:600;">Ward 2 (North Zone)</td>
+                                    <td><span class="badge badge-reported">${cases.filter(c => c.ward.includes('Ward 2')).length}</span></td>
+                                    <td>${cases.filter(c => c.ward.includes('Ward 2') && c.status === 'Notice Issued').length}</td>
+                                    <td><span style="color:#ef4444; font-weight:700;">${cases.filter(c => c.ward.includes('Ward 2') && c.status === 'Overdue').length}</span></td>
+                                    <td>Officer David Chen</td>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                                            <div style="flex:1; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
+                                                <div style="width:91%; height:100%; background:#10b981;"></div>
+                                            </div>
+                                            <span style="font-size:0.75rem; font-weight:600;">91%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="font-weight:600;">Ward 5 (South Zone)</td>
+                                    <td><span class="badge badge-reported">${cases.filter(c => c.ward.includes('Ward 5')).length}</span></td>
+                                    <td>${cases.filter(c => c.ward.includes('Ward 5') && c.status === 'Notice Issued').length}</td>
+                                    <td><span style="color:#ef4444; font-weight:700;">${cases.filter(c => c.ward.includes('Ward 5') && c.status === 'Overdue').length}</span></td>
+                                    <td>Inspector Rajesh Varma</td>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                                            <div style="flex:1; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
+                                                <div style="width:88%; height:100%; background:#10b981;"></div>
+                                            </div>
+                                            <span style="font-size:0.75rem; font-weight:600;">88%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="font-weight:600;">Ward 1 (East Zone)</td>
+                                    <td><span class="badge badge-reported">${cases.filter(c => c.ward.includes('Ward 1')).length}</span></td>
+                                    <td>${cases.filter(c => c.ward.includes('Ward 1') && c.status === 'Notice Issued').length}</td>
+                                    <td><span style="color:#ef4444; font-weight:700;">${cases.filter(c => c.ward.includes('Ward 1') && c.status === 'Overdue').length}</span></td>
+                                    <td>Officer David Chen</td>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                                            <div style="flex:1; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
+                                                <div style="width:100%; height:100%; background:#10b981;"></div>
+                                            </div>
+                                            <span style="font-size:0.75rem; font-weight:600;">100%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Category Breakdown -->
+            <div class="card-section" style="margin-bottom:0;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i data-lucide="layers"></i> Encroachment Categories
+                    </div>
+                </div>
+                <div class="card-body" style="display:flex; flex-direction:column; gap:1.25rem;">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:600; margin-bottom:0.3rem;">
+                            <span>Illegal Commercial Hoarding</span>
+                            <span>55%</span>
+                        </div>
+                        <div style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                            <div style="width:55%; height:100%; background:#15803d;"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:600; margin-bottom:0.3rem;">
+                            <span>Digital Billboard / Screen</span>
+                            <span>25%</span>
+                        </div>
+                        <div style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                            <div style="width:25%; height:100%; background:#0284c7;"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:600; margin-bottom:0.3rem;">
+                            <span>Political Banner / Flex</span>
+                            <span>12%</span>
+                        </div>
+                        <div style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                            <div style="width:12%; height:100%; background:#d97706;"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:600; margin-bottom:0.3rem;">
+                            <span>Footpath Kiosk / Obstruction</span>
+                            <span>8%</span>
+                        </div>
+                        <div style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                            <div style="width:8%; height:100%; background:#6b7280;"></div>
+                        </div>
+                    </div>
+
+                    <div style="border-top:1px solid #e2e8f0; padding-top:0.75rem; margin-top:0.5rem; font-size:0.775rem; color:var(--text-secondary);">
+                        <i data-lucide="shield-alert" style="width:14px; height:14px; display:inline; vertical-align:middle; color:#d97706;"></i>
+                        AI Camera Feed Integration active across 24 traffic intersections.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Master Recent Cases Table -->
+        <div class="card-section">
+            <div class="card-header">
+                <div class="card-title">
+                    <i data-lucide="list"></i> Master Encroachment Registry (Recent Entries)
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="currentView='cases'; renderSidebarMenu(); renderMainView();">
+                    View All ${cases.length} Cases &rarr;
+                </button>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Case ID</th>
+                                <th>Violation Category</th>
+                                <th>Location & Ward</th>
+                                <th>Assigned Inspector</th>
+                                <th>Priority</th>
+                                <th>Statutory Status</th>
+                                <th>Executive Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${cases.slice(0, 5).map(c => `
+                                <tr onclick="viewCaseDetails('${c.id}')">
+                                    <td class="case-id-cell">${c.id}</td>
+                                    <td>
+                                        <div style="font-weight:600;">${c.type}</div>
+                                        <div style="font-size:0.75rem; color:var(--text-secondary);">${c.category}</div>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight:500;">${c.ward}</div>
+                                        <div style="font-size:0.75rem; color:var(--text-secondary); max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.locationText}</div>
+                                    </td>
+                                    <td>${c.assignedOfficer}</td>
+                                    <td><span class="badge ${c.priority === 'High' ? 'badge-overdue' : 'badge-reported'}">${c.priority} Priority</span></td>
+                                    <td>${getStatusBadge(c.status)}</td>
+                                    <td>
+                                        <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); viewCaseDetails('${c.id}')">
+                                            <i data-lucide="eye"></i> Inspect File
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function exportMunicipalSummaryReport() {
+    showToast('Executive Municipal Summary Report generated and downloaded', 'success');
+}
+
+/* 3A. MASTER CASES PAGE */
+function renderCasesPage(container) {
+    const cases = getCasesStore();
+
+    container.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Master Encroachment Registry</h1>
+                <p class="page-subtitle">Central database of all flagged billboards, banners, and digital encroachments across municipal jurisdiction.</p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-secondary" onclick="exportMunicipalSummaryReport()">
+                    <i data-lucide="file-spreadsheet"></i> Export CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="muniCaseSearch" placeholder="Search by Case ID, location, violator or keywords..." oninput="filterMunicipalCasesTable()">
+            </div>
+            <div class="filter-group">
+                <select class="filter-select" id="muniStatusFilter" onchange="filterMunicipalCasesTable()">
+                    <option value="ALL">All Statuses</option>
+                    <option value="Reported">Reported</option>
+                    <option value="Under Verification">Under Verification</option>
+                    <option value="Verified">Verified</option>
+                    <option value="Notice Issued">Notice Issued</option>
+                    <option value="Action Taken">Action Taken</option>
+                    <option value="Overdue">Overdue</option>
+                    <option value="Closed">Closed / Complied</option>
+                </select>
+
+                <select class="filter-select" id="muniWardFilter" onchange="filterMunicipalCasesTable()">
+                    <option value="ALL">All Wards</option>
+                    <option value="Ward 4">Ward 4 (CBD)</option>
+                    <option value="Ward 2">Ward 2 (North)</option>
+                    <option value="Ward 5">Ward 5 (South)</option>
+                    <option value="Ward 1">Ward 1 (East)</option>
+                </select>
+
+                <select class="filter-select" id="muniTypeFilter" onchange="filterMunicipalCasesTable()">
+                    <option value="ALL">All Violation Types</option>
+                    <option value="Illegal Hoarding">Illegal Hoarding</option>
+                    <option value="Digital Encroachment">Digital Encroachment</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card-section">
+            <div class="card-header">
+                <div class="card-title"><i data-lucide="folder-open"></i> Encroachment Cases Registry</div>
+                <span class="text-secondary" style="font-size:0.85rem;" id="muniCasesCountBadge">Showing all ${cases.length} cases</span>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Case ID</th>
+                                <th>Type & Category</th>
+                                <th>Location & Ward</th>
+                                <th>Reported Date</th>
+                                <th>Assigned Inspector</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="muniTableBody">
+                            ${renderMunicipalTableRows(cases)}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderMunicipalTableRows(casesList) {
+    if (casesList.length === 0) {
+        return `<tr><td colspan="8" style="text-align:center; padding: 2.5rem; color:var(--text-muted);">No cases match the selected search criteria.</td></tr>`;
+    }
+
+    return casesList.map(c => `
+        <tr onclick="viewCaseDetails('${c.id}')">
+            <td class="case-id-cell">${c.id}</td>
+            <td>
+                <div style="font-weight:600;">${c.type}</div>
+                <div style="font-size:0.75rem; color:var(--text-secondary);">${c.category}</div>
+            </td>
+            <td>
+                <div style="font-weight:500;">${c.ward}</div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.locationText}</div>
+            </td>
+            <td>${c.reportedDate}</td>
+            <td>${c.assignedOfficer}</td>
+            <td><span class="badge ${c.priority === 'High' ? 'badge-overdue' : 'badge-reported'}">${c.priority} Priority</span></td>
+            <td>${getStatusBadge(c.status)}</td>
+            <td>
+                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); viewCaseDetails('${c.id}')">
+                    <i data-lucide="eye"></i> Inspect File
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterMunicipalCasesTable() {
+    const search = document.getElementById('muniCaseSearch').value.toLowerCase();
+    const status = document.getElementById('muniStatusFilter').value;
+    const ward = document.getElementById('muniWardFilter').value;
+    const type = document.getElementById('muniTypeFilter').value;
+
+    const cases = getCasesStore();
+    const filtered = cases.filter(c => {
+        const matchesSearch = c.id.toLowerCase().includes(search) ||
+                              c.locationText.toLowerCase().includes(search) ||
+                              c.description.toLowerCase().includes(search) ||
+                              c.assignedOfficer.toLowerCase().includes(search);
+        const matchesStatus = status === 'ALL' || c.status === status;
+        const matchesWard = ward === 'ALL' || c.ward.includes(ward);
+        const matchesType = type === 'ALL' || c.type === type;
+        return matchesSearch && matchesStatus && matchesWard && matchesType;
+    });
+
+    document.getElementById('muniTableBody').innerHTML = renderMunicipalTableRows(filtered);
+    document.getElementById('muniCasesCountBadge').textContent = `Showing ${filtered.length} cases`;
+    lucide.createIcons();
+}
+
+/* 3B. GIS MAP PAGE */
+function renderMapPage(container) {
+    const cases = getCasesStore();
+
+    container.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">GIS Encroachment Spatial Map</h1>
+                <p class="page-subtitle">Geographical plot of illegal hoardings, digital screens, and structural violations across city coordinates.</p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-secondary" onclick="renderMainView()">
+                    <i data-lucide="rotate-cw"></i> Refresh GIS Pins
+                </button>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 3fr 1fr; gap:1.5rem;">
+            <div class="card-section" style="margin-bottom:0;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i data-lucide="map-pin"></i> Interactive Leaflet GIS Map
+                    </div>
+                    <span style="font-size:0.8rem; color:var(--text-secondary);"><i data-lucide="compass" style="width:14px;"></i> City Center Zone</span>
+                </div>
+                <div class="card-body" style="padding:0;">
+                    <div id="gisMapFull" style="height: 520px; width:100%; border-radius: 0 0 var(--radius-md) var(--radius-md);"></div>
+                </div>
+            </div>
+
+            <div class="card-section" style="margin-bottom:0;">
+                <div class="card-header">
+                    <div class="card-title"><i data-lucide="layers"></i> Map Legend & Quick View</div>
+                </div>
+                <div class="card-body" style="display:flex; flex-direction:column; gap:1rem; font-size:0.85rem;">
+                    <div>
+                        <div style="font-weight:700; margin-bottom:0.5rem; color:var(--text-primary);">Pin Color Indicators:</div>
+                        <div style="display:flex; flex-direction:column; gap:0.4rem;">
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span style="width:12px; height:12px; border-radius:50%; background:#ef4444; display:inline-block;"></span>
+                                <span><strong>Red:</strong> Overdue Enforcement</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span style="width:12px; height:12px; border-radius:50%; background:#f97316; display:inline-block;"></span>
+                                <span><strong>Orange:</strong> 72h Notice Active</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span style="width:12px; height:12px; border-radius:50%; background:#3b82f6; display:inline-block;"></span>
+                                <span><strong>Blue:</strong> Reported / Verification</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span style="width:12px; height:12px; border-radius:50%; background:#10b981; display:inline-block;"></span>
+                                <span><strong>Green:</strong> Action Taken / Closed</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="border-top:1px solid #e2e8f0; padding-top:1rem;">
+                        <div style="font-weight:700; margin-bottom:0.5rem;">Quick Case Drawer:</div>
+                        <div id="gisSelectedDetails" style="color:var(--text-secondary); font-size:0.8rem; line-height:1.4;">
+                            Click any marker pin on the map to inspect location, evidence, and instant squad deployment controls.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    requestAnimationFrame(() => {
+        const gisMap = L.map('gisMapFull').setView([18.5204, 73.8567], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(gisMap);
+
+        cases.forEach(c => {
+            if (c.coordinates) {
+                let color = '#3b82f6';
+                if (c.status === 'Overdue') color = '#ef4444';
+                else if (c.status === 'Notice Issued') color = '#f97316';
+                else if (c.status === 'Closed' || c.status === 'Action Taken') color = '#10b981';
+
+                const markerIcon = L.divIcon({
+                    className: 'custom-gis-pin',
+                    html: `<div style="background-color:${color}; width:16px; height:16px; border-radius:50%; border:3px solid #ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
+                    iconSize: [20, 20]
+                });
+
+                const marker = L.marker(c.coordinates, { icon: markerIcon }).addTo(gisMap);
+
+                marker.on('click', () => {
+                    const drawer = document.getElementById('gisSelectedDetails');
+                    if (drawer) {
+                        drawer.innerHTML = `
+                            <div style="background:#f8fafc; padding:0.85rem; border-radius:6px; border:1px solid #e2e8f0;">
+                                <div style="font-weight:700; color:var(--primary-blue); margin-bottom:0.2rem;">${c.id}</div>
+                                <div style="font-weight:600; font-size:0.85rem;">${c.type}</div>
+                                <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.4rem;">${c.ward}</div>
+                                <div style="margin-bottom:0.5rem;">${getStatusBadge(c.status)}</div>
+                                <div style="font-size:0.75rem; color:var(--text-primary); margin-bottom:0.75rem;">${c.locationText}</div>
+                                <button class="btn btn-primary btn-sm" style="width:100%;" onclick="viewCaseDetails('${c.id}')">
+                                    <i data-lucide="eye"></i> Open Case File
+                                </button>
+                            </div>
+                        `;
+                        lucide.createIcons();
+                    }
+                });
+            }
+        });
+    }, 100);
+}
+
+/* 3C. WARD MONITORING & ANALYTICS PAGE */
+function renderMonitoringPage(container) {
+    const cases = getCasesStore();
+
+    container.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Ward Analytics & Spatial Monitoring</h1>
+                <p class="page-subtitle">Spatial statistics, violation density, compliance rates, and enforcement benchmarks across municipal sectors.</p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-secondary" onclick="showToast('Ward Analytics CSV Exported', 'info')">
+                    <i data-lucide="download"></i> Download Report
+                </button>
+            </div>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-header"><span>Overall SLA Compliance</span><i data-lucide="award"></i></div>
+                <div class="kpi-value" style="color:#10b981;">88.4%</div>
+                <div class="kpi-footer">Statutory resolution within SLA</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-header"><span>Average Site Visit Speed</span><i data-lucide="clock"></i></div>
+                <div class="kpi-value" style="color:#0284c7;">4.2 Hours</div>
+                <div class="kpi-footer">From citizen report to officer check</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-header"><span>Statutory Notices Served</span><i data-lucide="file-check"></i></div>
+                <div class="kpi-value" style="color:#d97706;">48 Notices</div>
+                <div class="kpi-footer">Issued under Section 244</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-header"><span>Demolition Operations</span><i data-lucide="truck"></i></div>
+                <div class="kpi-value" style="color:#ef4444;">14 Executed</div>
+                <div class="kpi-footer">Structures seized & dismantled</div>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.5rem; margin-bottom:2rem;">
+            
+            <div class="card-section" style="margin-bottom:0;">
+                <div class="card-header">
+                    <div class="card-title"><i data-lucide="building"></i> Ward 4 (CBD Central)</div>
+                    <span class="badge badge-reported">High Activity</span>
+                </div>
+                <div class="card-body" style="display:flex; flex-direction:column; gap:0.75rem;">
+                    <div><strong>Senior Inspector:</strong> Inspector Rajesh Varma</div>
+                    <div><strong>Total Encroachments Logged:</strong> 18 Cases</div>
+                    <div><strong>Notices Issued:</strong> 6 Active</div>
+                    <div><strong>Overdue Escalations:</strong> 2 Overdue</div>
+                    <div style="margin-top:0.5rem;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:600; margin-bottom:0.2rem;">
+                            <span>Compliance Rate</span>
+                            <span>82%</span>
+                        </div>
+                        <div style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                            <div style="width:82%; height:100%; background:#10b981;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-section" style="margin-bottom:0;">
+                <div class="card-header">
+                    <div class="card-title"><i data-lucide="building"></i> Ward 2 (North Zone)</div>
+                    <span class="badge badge-verified">Moderate</span>
+                </div>
+                <div class="card-body" style="display:flex; flex-direction:column; gap:0.75rem;">
+                    <div><strong>Senior Inspector:</strong> Officer David Chen</div>
+                    <div><strong>Total Encroachments Logged:</strong> 12 Cases</div>
+                    <div><strong>Notices Issued:</strong> 4 Active</div>
+                    <div><strong>Overdue Escalations:</strong> 0 Overdue</div>
+                    <div style="margin-top:0.5rem;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:600; margin-bottom:0.2rem;">
+                            <span>Compliance Rate</span>
+                            <span>91%</span>
+                        </div>
+                        <div style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                            <div style="width:91%; height:100%; background:#10b981;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-section" style="margin-bottom:0;">
+                <div class="card-header">
+                    <div class="card-title"><i data-lucide="building"></i> Ward 5 (South Zone)</div>
+                    <span class="badge badge-notice">Action Needed</span>
+                </div>
+                <div class="card-body" style="display:flex; flex-direction:column; gap:0.75rem;">
+                    <div><strong>Senior Inspector:</strong> Inspector Rajesh Varma</div>
+                    <div><strong>Total Encroachments Logged:</strong> 15 Cases</div>
+                    <div><strong>Notices Issued:</strong> 5 Active</div>
+                    <div><strong>Overdue Escalations:</strong> 1 Overdue</div>
+                    <div style="margin-top:0.5rem;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:600; margin-bottom:0.2rem;">
+                            <span>Compliance Rate</span>
+                            <span>88%</span>
+                        </div>
+                        <div style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                            <div style="width:88%; height:100%; background:#10b981;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-section" style="margin-bottom:0;">
+                <div class="card-header">
+                    <div class="card-title"><i data-lucide="building"></i> Ward 1 (East Zone)</div>
+                    <span class="badge badge-compliance">Top Performer</span>
+                </div>
+                <div class="card-body" style="display:flex; flex-direction:column; gap:0.75rem;">
+                    <div><strong>Senior Inspector:</strong> Officer David Chen</div>
+                    <div><strong>Total Encroachments Logged:</strong> 8 Cases</div>
+                    <div><strong>Notices Issued:</strong> 2 Active</div>
+                    <div><strong>Overdue Escalations:</strong> 0 Overdue</div>
+                    <div style="margin-top:0.5rem;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:600; margin-bottom:0.2rem;">
+                            <span>Compliance Rate</span>
+                            <span>100%</span>
+                        </div>
+                        <div style="height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                            <div style="width:100%; height:100%; background:#10b981;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    `;
+}
+
+/* 3D. OFFICER MANAGEMENT PAGE */
+function renderOfficerManagementPage(container) {
+    const officers = [
+        { name: "Inspector Rajesh Varma", ward: "Ward 4 CBD & Ward 5 South", activeWorkload: 14, completedThisMonth: 28, score: "98%", status: "Active On-Field" },
+        { name: "Officer David Chen", ward: "Ward 2 North & Ward 1 East", activeWorkload: 8, completedThisMonth: 22, score: "95%", status: "Active On-Field" },
+        { name: "Inspector Priya Nair", ward: "Ward 3 West Zone", activeWorkload: 6, completedThisMonth: 19, score: "100%", status: "Active On-Field" },
+        { name: "Inspector Sunita Patil", ward: "Special Enforcement Demolition Squad", activeWorkload: 5, completedThisMonth: 31, score: "96%", status: "On Squad Duty" }
+    ];
+
+    container.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Field Inspector & Officer Management</h1>
+                <p class="page-subtitle">Track inspector workload distribution, field verification SLA compliance, and enforcement response times.</p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-primary" onclick="showToast('Reassignment Dialog Initialized', 'info')">
+                    <i data-lucide="user-plus"></i> Reassign Work Orders
+                </button>
+            </div>
+        </div>
+
+        <div class="card-section">
+            <div class="card-header">
+                <div class="card-title"><i data-lucide="users"></i> Municipal Field Officers Registry</div>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Officer Name</th>
+                                <th>Assigned Jurisdiction</th>
+                                <th>Active Work Queue</th>
+                                <th>Completed (Month)</th>
+                                <th>SLA Efficiency Score</th>
+                                <th>Duty Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${officers.map(off => `
+                                <tr>
+                                    <td style="font-weight:700; color:var(--text-primary);">${off.name}</td>
+                                    <td>${off.ward}</td>
+                                    <td><span class="badge badge-reported">${off.activeWorkload} Cases</span></td>
+                                    <td><strong>${off.completedThisMonth}</strong> Cases</td>
+                                    <td><span style="color:#10b981; font-weight:700;">${off.score}</span></td>
+                                    <td><span class="badge badge-verified">${off.status}</span></td>
+                                    <td>
+                                        <button class="btn btn-secondary btn-sm" onclick="showToast('Opened Officer Workload Queue for ${off.name}', 'info')">
+                                            <i data-lucide="list"></i> View Queue
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/* 3E. STATUTORY NOTICE REGISTRY PAGE */
+function renderNoticeRegistryPage(container) {
+    const cases = getCasesStore();
+    const noticeCases = cases.filter(c => c.noticeInfo || c.status === 'Notice Issued' || c.status === 'Overdue');
+
+    container.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Municipal Statutory Notice Registry</h1>
+                <p class="page-subtitle">Master directory of 72-hour and 24-hour statutory removal notices served under PMC Bylaws Section 244.</p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-secondary" onclick="exportMunicipalSummaryReport()">
+                    <i data-lucide="download"></i> Download Registry
+                </button>
+            </div>
+        </div>
+
+        <div class="card-section">
+            <div class="card-header">
+                <div class="card-title"><i data-lucide="file-text"></i> Served Notice Directory</div>
+                <span class="badge badge-notice">${noticeCases.length} Active Notices</span>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Notice Serial #</th>
+                                <th>Case Reference</th>
+                                <th>Violator Entity / Issued To</th>
+                                <th>Issue Timestamp</th>
+                                <th>Statutory Deadline</th>
+                                <th>Notice Status</th>
+                                <th>Executive Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${noticeCases.map(c => {
+                                const info = c.noticeInfo || {
+                                    noticeNumber: `MNC/NTC/2026/${Math.floor(1000+Math.random()*9000)}`,
+                                    issuedDate: c.reportedDate,
+                                    issuedTo: "SkyHigh Media Pvt Ltd",
+                                    deadlineDate: "72 Hours Lapsed",
+                                    status: c.status === 'Overdue' ? 'DEADLINE EXPIRED' : 'Active Notice'
+                                };
+                                return `
+                                    <tr onclick="viewCaseDetails('${c.id}')">
+                                        <td style="font-family:monospace; font-weight:700; color:#c2410c;">${info.noticeNumber}</td>
+                                        <td class="case-id-cell">${c.id}</td>
+                                        <td style="font-weight:600;">${info.issuedTo}</td>
+                                        <td>${info.issuedDate}</td>
+                                        <td style="color:#ef4444; font-weight:600;">${info.deadlineDate}</td>
+                                        <td>${c.status === 'Overdue' ? `<span class="badge badge-overdue">EXPIRED OVERDUE</span>` : `<span class="badge badge-notice">Active 72h Notice</span>`}</td>
+                                        <td>
+                                            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); viewCaseDetails('${c.id}')">
+                                                <i data-lucide="eye"></i> Inspect File
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/* 3F. PENALTIES & FINES PAGE */
+function renderPenaltiesFinesPage(container) {
+    const penalties = [
+        { challan: "CHL-2026-8801", caseId: "SHD-2026-1042", violator: "SkyHigh Media Pvt Ltd", category: "Heavy Commercial Hoarding", amount: "₹50,000", dueDate: "2026-09-30", status: "Pending Payment" },
+        { challan: "CHL-2026-8794", caseId: "SHD-2026-1039", violator: "Local Organizer Group", category: "Political Flex Banner", amount: "₹25,000", dueDate: "2026-09-27", status: "Billed to Organizer" },
+        { challan: "CHL-2026-8720", caseId: "SDE-2026-1035", violator: "Metro Retailers Assn", category: "Digital Kiosk Footpath", amount: "₹5,000", dueDate: "2026-09-24", status: "PAID IN FULL" },
+        { challan: "CHL-2026-8650", caseId: "SHD-2026-1045", violator: "Vanguard Outdoor Media", category: "Rusted Structural Frame", amount: "₹50,000", dueDate: "2026-09-25", status: "OVERDUE DEFAULT" }
+    ];
+
+    container.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Penalties & Compounding Fines Portal</h1>
+                <p class="page-subtitle">Statutory financial recovery management, compounding penalty billing, and revenue collection for unauthorized hoardings.</p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-secondary" onclick="exportMunicipalSummaryReport()">
+                    <i data-lucide="receipt"></i> Revenue Audit Export
+                </button>
+            </div>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-header"><span>Total Penalties Imposed</span><i data-lucide="receipt"></i></div>
+                <div class="kpi-value" style="color:var(--text-primary);">₹1,30,000</div>
+                <div class="kpi-footer">Compounding fines billed</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-header"><span>Collected Revenue</span><i data-lucide="check-circle-2"></i></div>
+                <div class="kpi-value" style="color:#10b981;">₹5,000</div>
+                <div class="kpi-footer">Paid into Municipal Treasury</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-header"><span>Outstanding Penalties</span><i data-lucide="clock"></i></div>
+                <div class="kpi-value" style="color:#d97706;">₹75,000</div>
+                <div class="kpi-footer">Pending within notice window</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-header"><span>Revenue Default Recovery</span><i data-lucide="alert-triangle"></i></div>
+                <div class="kpi-value" style="color:#ef4444;">₹50,000</div>
+                <div class="kpi-footer">Lien demand dispatched</div>
+            </div>
+        </div>
+
+        <div class="card-section">
+            <div class="card-header">
+                <div class="card-title"><i data-lucide="receipt"></i> Statutory Challan & Fine Directory</div>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Challan #</th>
+                                <th>Case Ref</th>
+                                <th>Violator Entity</th>
+                                <th>Violation Category</th>
+                                <th>Compounding Fine</th>
+                                <th>Payment Due Date</th>
+                                <th>Financial Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${penalties.map(p => `
+                                <tr>
+                                    <td style="font-family:monospace; font-weight:700; color:var(--text-primary);">${p.challan}</td>
+                                    <td class="case-id-cell">${p.caseId}</td>
+                                    <td style="font-weight:600;">${p.violator}</td>
+                                    <td>${p.category}</td>
+                                    <td style="font-weight:700; font-size:0.95rem; color:var(--primary-blue);">${p.amount}</td>
+                                    <td>${p.dueDate}</td>
+                                    <td>
+                                        ${p.status.includes('PAID') ? `<span class="badge badge-compliance">PAID IN FULL</span>` : p.status.includes('OVERDUE') ? `<span class="badge badge-overdue">OVERDUE DEFAULT</span>` : `<span class="badge badge-notice">${p.status}</span>`}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-secondary btn-sm" onclick="showToast('Dispatched Financial Demand Notice for ${p.challan}', 'success')">
+                                            <i data-lucide="send"></i> Issue Demand
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/* 3G. COMPLIANCE TRACKER PAGE */
+function renderComplianceTrackerPage(container) {
+    const cases = getCasesStore();
+
+    container.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Site Compliance & Verification Audit</h1>
+                <p class="page-subtitle">Compare pre-demolition vs post-demolition photo verifications and issue structural clearance certificates.</p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-secondary" onclick="renderMainView()"><i data-lucide="rotate-cw"></i> Refresh Audit Logs</button>
+            </div>
+        </div>
+
+        <div class="card-section">
+            <div class="card-header">
+                <div class="card-title"><i data-lucide="shield-check"></i> Verification & Clearance Audit Directory</div>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Case ID</th>
+                                <th>Violation Location</th>
+                                <th>Inspecting Officer</th>
+                                <th>Resolution Type</th>
+                                <th>Pre-Removal Evidence</th>
+                                <th>Post-Removal Verification</th>
+                                <th>Compliance State</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${cases.map(c => `
+                                <tr>
+                                    <td class="case-id-cell">${c.id}</td>
+                                    <td>
+                                        <div style="font-weight:600;">${c.ward}</div>
+                                        <div style="font-size:0.75rem; color:var(--text-secondary); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.locationText}</div>
+                                    </td>
+                                    <td>${c.assignedOfficer}</td>
+                                    <td>${c.actionDetails ? c.actionDetails.actionType : c.noticeInfo ? 'Voluntary Compliance Window' : 'Field Inspection'}</td>
+                                    <td>
+                                        <button class="btn btn-secondary btn-sm" onclick="window.open('${c.evidencePhotos[0]}')">
+                                            <i data-lucide="camera"></i> View Before
+                                        </button>
+                                    </td>
+                                    <td>
+                                        ${c.actionDetails && c.actionDetails.afterPhoto ? `
+                                            <button class="btn btn-secondary btn-sm" style="border-color:#86efac; color:#166534;" onclick="window.open('${c.actionDetails.afterPhoto}')">
+                                                <i data-lucide="check-circle"></i> View After
+                                            </button>
+                                        ` : `<span style="font-size:0.75rem; color:var(--text-muted);">Pending Removal</span>`}
+                                    </td>
+                                    <td>${getStatusBadge(c.status)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/* 3H. DEMOLITION SQUAD & RESOURCE DISPATCH CENTER */
+function renderResourceDispatchPage(container) {
+    const cases = getCasesStore();
+    const overdueCases = cases.filter(c => c.status === 'Overdue');
+
+    container.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Demolition Squad & Resource Dispatch Center</h1>
+                <p class="page-subtitle">Deploy municipal demolition crews, hydraulic cranes, gas cutters, and impound vehicles for forced removals.</p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-danger" onclick="showToast('ALL DEMOLITION SQUADS PLACED ON HIGH ALERT', 'success')">
+                    <i data-lucide="radio"></i> Broadcast Rapid Dispatch Alert
+                </button>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1.25rem; margin-bottom:2rem;">
+            
+            <div class="card-section" style="margin-bottom:0; border-top:3px solid #10b981;">
+                <div class="card-header">
+                    <div class="card-title"><i data-lucide="truck"></i> Demolition Squad #1</div>
+                    <span class="badge badge-compliance">DEPLOYED</span>
+                </div>
+                <div class="card-body" style="font-size:0.85rem; display:flex; flex-direction:column; gap:0.5rem;">
+                    <div><strong>Equipment:</strong> 30-Ton Hydraulic Crane + Gas Cutters</div>
+                    <div><strong>Personnel:</strong> 6 Field Dismantlers</div>
+                    <div><strong>Current Sector:</strong> Ward 4 CBD Sector B</div>
+                    <button class="btn btn-secondary btn-sm" style="margin-top:0.5rem;" onclick="showToast('Squad #1 Status: In Operation at MG Road', 'info')">Track GPS Live</button>
+                </div>
+            </div>
+
+            <div class="card-section" style="margin-bottom:0; border-top:3px solid #3b82f6;">
+                <div class="card-header">
+                    <div class="card-title"><i data-lucide="truck"></i> Demolition Squad #2</div>
+                    <span class="badge badge-verified">STANDBY</span>
+                </div>
+                <div class="card-body" style="font-size:0.85rem; display:flex; flex-direction:column; gap:0.5rem;">
+                    <div><strong>Equipment:</strong> Flatbed Truck + Metal Shears</div>
+                    <div><strong>Personnel:</strong> 4 Field Dismantlers</div>
+                    <div><strong>Current Sector:</strong> Central Municipal Yard</div>
+                    <button class="btn btn-primary btn-sm" style="margin-top:0.5rem;" onclick="showToast('Squad #2 Dispatched to Ward 5', 'success')">Dispatch to Ward 5</button>
+                </div>
+            </div>
+
+            <div class="card-section" style="margin-bottom:0; border-top:3px solid #f97316;">
+                <div class="card-header">
+                    <div class="card-title"><i data-lucide="truck"></i> Demolition Squad #3</div>
+                    <span class="badge badge-notice">EN ROUTE</span>
+                </div>
+                <div class="card-body" style="font-size:0.85rem; display:flex; flex-direction:column; gap:0.5rem;">
+                    <div><strong>Equipment:</strong> Heavy Tow Truck + Hydraulic Lift</div>
+                    <div><strong>Personnel:</strong> 5 Field Dismantlers</div>
+                    <div><strong>Current Sector:</strong> Transit to Station Flyover</div>
+                    <button class="btn btn-secondary btn-sm" style="margin-top:0.5rem;" onclick="showToast('Squad #3 Status: En Route', 'info')">Track GPS Live</button>
+                </div>
+            </div>
+
+            <div class="card-section" style="margin-bottom:0; border-top:3px solid #ef4444;">
+                <div class="card-header">
+                    <div class="card-title"><i data-lucide="truck"></i> Demolition Squad #4</div>
+                    <span class="badge badge-overdue">RAPID RESPONSE</span>
+                </div>
+                <div class="card-body" style="font-size:0.85rem; display:flex; flex-direction:column; gap:0.5rem;">
+                    <div><strong>Equipment:</strong> Emergency Hazard Rig</div>
+                    <div><strong>Personnel:</strong> 8 Specialist Dismantlers</div>
+                    <div><strong>Current Sector:</strong> Ward 4 CBD North Base</div>
+                    <button class="btn btn-danger btn-sm" style="margin-top:0.5rem;" onclick="showToast('Emergency Deployment Triggered for Squad #4', 'success')">Trigger Emergency Dispatch</button>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="card-section" style="border-top:3px solid #ef4444;">
+            <div class="card-header" style="background:#fef2f2;">
+                <div class="card-title" style="color:#991b1b;"><i data-lucide="flame" style="color:#ef4444;"></i> Urgent Overdue Demolition Queue</div>
+                <span class="badge badge-overdue">${overdueCases.length} Cases Requiring Demolition</span>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Case ID</th>
+                                <th>Location & Ward</th>
+                                <th>Violator Entity</th>
+                                <th>Notice Lapsed</th>
+                                <th>Hazard Priority</th>
+                                <th>Demolition Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${overdueCases.length === 0 ? `
+                                <tr><td colspan="6" style="text-align:center; padding:2rem; color:var(--text-muted);">No cases currently in the overdue demolition queue. All notices compliant!</td></tr>
+                            ` : overdueCases.map(c => `
+                                <tr>
+                                    <td class="case-id-cell" style="color:#ef4444;">${c.id}</td>
+                                    <td>
+                                        <div style="font-weight:600;">${c.ward}</div>
+                                        <div style="font-size:0.75rem; color:var(--text-secondary);">${c.locationText}</div>
+                                    </td>
+                                    <td style="font-weight:600;">${c.noticeInfo ? c.noticeInfo.issuedTo : 'SkyHigh Outdoor Media'}</td>
+                                    <td><span class="badge-sla-breach">Expired ${c.noticeInfo ? c.noticeInfo.deadlineDate : 'Sep 24'}</span></td>
+                                    <td><span class="badge badge-overdue">HIGH RISK</span></td>
+                                    <td>
+                                        <button class="btn btn-danger btn-sm" onclick="openOfficerActionModal('${c.id}', 'action')">
+                                            <i data-lucide="truck"></i> DISPATCH DEMOLITION SQUAD NOW
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/* 3I. AUDIT HISTORY LOG PAGE */
+function renderHistoryPage(container) {
+    const historyLogs = [
+        { time: "2026-09-28 01:15 AM", actor: "Dr. Anita Roy (Deputy Commissioner)", action: "Executive Oversight", caseId: "SHD-2026-1045", details: "Reviewed overdue demolition escalation. Issued priority squad dispatch command.", hash: "0x9f8a...32b1" },
+        { time: "2026-09-27 09:00 AM", actor: "Inspector Rajesh Varma", action: "Statutory Notice Served", caseId: "SHD-2026-1042", details: "Issued 72-hour official removal notice MNC/NTC/2026/0891 to SkyHigh Media Pvt Ltd.", hash: "0x7e4b...11c9" },
+        { time: "2026-09-26 02:30 PM", actor: "Inspector Rajesh Varma", action: "Field Site Verification", caseId: "SHD-2026-1042", details: "Inspected site. Confirmed hoarding has no PMC registration QR tag.", hash: "0x3a12...88f4" },
+        { time: "2026-09-26 02:00 PM", actor: "Demolition Squad #3", action: "Forced Demolition & Seizure", caseId: "SHD-2026-1039", details: "Political banner dismantled and impounded. Penalty fine of ₹25,000 levied.", hash: "0x1b55...77e2" },
+        { time: "2026-09-24 10:00 AM", actor: "System Administrator", action: "Case Compliance Closure", caseId: "SDE-2026-1035", details: "Verified voluntary kiosk removal and ₹5,000 fine payment. Case marked closed.", hash: "0x6d90...44a3" }
+    ];
+
+    container.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Municipal Audit History Log</h1>
+                <p class="page-subtitle">System-wide immutable audit trail recording citizen submissions, field inspections, legal notices, and demolition dispatches.</p>
+            </div>
+            <div class="page-actions">
+                <button class="btn btn-secondary" onclick="exportMunicipalSummaryReport()">
+                    <i data-lucide="download"></i> Export Audit Log (CSV)
+                </button>
+            </div>
+        </div>
+
+        <div class="card-section">
+            <div class="card-header">
+                <div class="card-title"><i data-lucide="history"></i> System Activity Audit Log</div>
+                <span class="text-secondary" style="font-size:0.85rem;">Cryptographically Stamped Logs</span>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Actor / User</th>
+                                <th>Action Category</th>
+                                <th>Case Ref</th>
+                                <th>Log Description</th>
+                                <th>Cryptographic Hash</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${historyLogs.map(log => `
+                                <tr>
+                                    <td style="font-size:0.8rem; white-space:nowrap; font-weight:500;">${log.time}</td>
+                                    <td style="font-weight:600; color:var(--text-primary);">${log.actor}</td>
+                                    <td><span class="badge badge-verified">${log.action}</span></td>
+                                    <td class="case-id-cell">${log.caseId}</td>
+                                    <td style="max-width:320px;">${log.details}</td>
+                                    <td><span style="font-family:monospace; font-size:0.75rem; color:var(--text-muted);">${log.hash}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
 
 /* ==========================================================================
    4. CASE DETAILS PAGE (THE MOST POLISHED SCREEN)
@@ -1140,7 +2304,7 @@ function renderCaseDetailsPage(container) {
     `;
 
     // Render case Leaflet map
-    setTimeout(() => {
+    requestAnimationFrame(() => {
         if (c.coordinates) {
             const detailMap = L.map('caseDetailMap').setView(c.coordinates, 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(detailMap);
