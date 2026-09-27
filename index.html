@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicTrack - Illegal Hoarding & Encroachment Management System | SMKC 2026</title>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <!-- Feather Icons / Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app" class="app-container">
+        <!-- Top Municipal Navigation Bar -->
+        <header class="top-nav">
+            <div class="nav-brand">
+                <div class="brand-logo">
+                    <i data-lucide="building-2"></i>
+                </div>
+                <div class="brand-titles">
+                    <span class="brand-name">CivicTrack Municipal System</span>
+                    <span class="brand-tagline">SMKC Civic Innovation Forum 2026 • Problem Statement 5</span>
+                </div>
+            </div>
+
+            <!-- Role Switcher & User Profile -->
+            <div class="nav-actions">
+                <div class="role-selector-container">
+                    <label for="roleSelect" class="role-label"><i data-lucide="user-check"></i> View Interface as:</label>
+                    <select id="roleSelect" class="role-select" onchange="switchRole(this.value)">
+                        <option value="citizen">👤 Citizen Portal</option>
+                        <option value="officer">👮 Field Officer Dashboard</option>
+                        <option value="municipal">🏛️ Municipal Admin Dashboard</option>
+                    </select>
+                </div>
+
+                <div class="user-profile-badge" id="userProfileBadge">
+                    <div class="avatar" id="userAvatar">C</div>
+                    <div class="profile-info">
+                        <span class="user-name" id="userName">Sarah Jenkins</span>
+                        <span class="user-role" id="userRoleTitle">Citizen Resident</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Body Area -->
+        <div class="main-layout">
+            <!-- Sidebar Navigation (Contextual per Role) -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <span class="sidebar-title" id="sidebarTitle">Citizen Portal</span>
+                </div>
+                <nav class="sidebar-menu" id="sidebarMenu">
+                    <!-- Dynamically populated based on active role -->
+                </nav>
+
+                <div class="sidebar-footer">
+                    <div class="system-status">
+                        <span class="status-indicator active"></span>
+                        <span class="status-text">Municipal Server Online</span>
+                    </div>
+                    <div class="system-version">v2.4.0 • Ward Net Sync</div>
+                </div>
+            </aside>
+
+            <!-- Main Content Display -->
+            <main class="content-area" id="contentArea">
+                <!-- Views will be dynamically rendered here -->
+            </main>
+        </div>
+    </div>
+
+    <!-- Modals Container -->
+    <div id="modalContainer"></div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="mockData.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
